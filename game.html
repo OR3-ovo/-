@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>与刘清正的同游</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=ZCOOL+KuaiLe&display=swap');
+
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: #000;
+            user-select: none;
+            font-family: 'ZCOOL KuaiLe', "Microsoft YaHei", sans-serif;
+        }
+
+        #game-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            display: none;
+        }
+
+        /* 背景 */
+        #bg {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            z-index: 1;
+        }
+
+        /* ================= 人物立绘：巨大化且底部下沉 ================= */
+        #character {
+            position: absolute;
+            left: 50%;
+            /* 关键点1：高度极大，占据屏幕 120% */
+            height: 120vh; 
+            /* 关键点2：底部往下拉，让下半身沉出屏幕外，防止露白边 */
+            bottom: -20vh; 
+            transform: translateX(-50%);
+            z-index: 2;
+            transition: all 0.4s ease;
+            
+                       /* 柔和的光晕，贴合背景 */
+            filter: drop-shadow(0px 5px 15px rgba(255, 150, 180, 0.4));
+        }
+
+        /* 抚摸模式：放得更大 */
+        .pet-mode {
+            height: 140vh !important;
+            bottom: -40vh !important; 
+            cursor: pointer;
+        }
+
+        /* 剧烈抖动 */
+        @keyframes shake {
+            0% { transform: translateX(-50%) translate(0, 0) rotate(0deg); }
+            25% { transform: translateX(-50%) translate(-20px, -5px) rotate(-3deg); }
+            50% { transform: translateX(-50%) translate(20px, 5px) rotate(3deg); }
+            75% { transform: translateX(-50%) translate(-15px, 10px) rotate(-2deg); }
+            100% { transform: translateX(-50%) translate(15px, -10px) rotate(2deg); }
+        }
+
+        .shaking {
+            animation: shake 0.15s infinite; 
+        }
+
+        /* ================= 花瓣层 ================= */
+        #petal-container {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            z-index: 3;
+            pointer-events: none;
+            overflow: hidden;
+        }
+
+        .petal {
+            position: absolute;
+            top: -50px;
+            width: 25px; 
+            animation: fall linear forwards;
+        }
+
+        @keyframes fall {
+            0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+            100% { transform: translateY(110vh) rotate(360deg); opacity: 0.6; }
+        }
+
+        /* ================= 纯代码手绘漫画对话框 ================= */
+        #ui-layer {
+            position: absolute;
+            bottom: 4%; /* 固定在底部 */
+            left: 50%;
+            transform: translateX(-50%);
+            width: 90%; 
+            max-width: 1000px;
+            height: 220px; /* 高度固定，不会跑来跑去 */
+            z-index: 4; /* 死死压住人物（z-index: 2） */
+            pointer-events: none; /* 让点击事件穿透到背景推进剧情 */
+        }
+
+        .dialog-box {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            /* 纯 CSS 画出的对话框 */
+            background: rgba(255, 255, 255, 0.95);
+            border: 4px solid #ffb6c1;
+            border-radius: 30px;
+            box-shadow: 0 10px 30px rgba(255, 105, 180, 0.2), inset 0 0 15px rgba(255, 182, 193, 0.3);
+            box-sizing: border-box;
+            padding: 40px 50px;
+            pointer-events: auto; /* 内部可以被点击 */
+        }
+
+        /* 仿照你原图的小蛋糕装饰 */
+        .dialog-box::before {
+            content: "🌸";
+            position: absolute;
+            top: -25px;
+            left: 30px;
+            font-size: 40px;
+            filter: drop-shadow(0 4px 4px rgba(0,0,0,0.1));
+        }
+
+        /* 名字标签（贴在框的左上角） */
+        #speaker-name {
+            position: absolute;
+            top: -25px;
+            left: 100px;
+            background: #ffb6c1;
+            color: #fff;
+            padding: 5px 30px;
+            border-radius: 20px;
+            font-size: 24px;
+            font-weight: bold;
+            box-shadow: 0 4px 10px rgba(255, 105, 180, 0.3);
+            letter-spacing: 2px;
+        }
+
+        /* 对话文字 */
+        #text-content {
+            font-size: 26px;
+            color: #555;
+            line-height: 1.8;
+            text-shadow: 1px 1px 2px rgba(255,255,255,0.8);
+            margin-top: 20px;
+        }
+
+        /* 点击提示 */
+        #click-hint {
+            position: absolute;
+            bottom: 20px;
+            right: 40px;
+            font-size: 20px;
+            color: #ff99bb;
+            animation: bounce 1s infinite alternate;
+        }
+
+        @keyframes bounce {
+            from { transform: translateY(0); }
+            to { transform: translateY(-8px); }
+        }
+
+        /* ================= 选项菜单 ================= */
+        #choices {
+            position: absolute;
+            top: 40%; 
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 5;
+            display: none;
+            flex-direction: column;
+            gap: 20px;
+            pointer-events: auto;
+        }
+
+        .choice-btn {
+            background: #fff;
+            border: 3px solid #ffb6c1;
+            border-radius: 25px;
+            padding: 15px 50px;
+            font-size: 24px;
+            font-weight: bold;
+            color: #ff88aa;
+            cursor: pointer;
+            box-shadow: 0 6px 15px rgba(255, 182, 193, 0.4);
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+
+        .choice-btn:hover {
+            transform: scale(1.05);
+            background: #ffb6c1;
+            color: #fff;
+        }
+
+        /* 开始屏幕 */
+        #start-screen {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: #ffe4e1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 10;
+            cursor: pointer;
+        }
+        #start-screen h1 {
+            color: #d65a8c;
+            font-size: 36px;
+            text-shadow: 2px 2px 0 #fff;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="start-screen" onclick="startGame()">
+        <h1>点击进入梦境🌸</h1>
+    </div>
+
+    <div id="game-container">
+        <!-- 背景 -->
+        <img src="bg.png" id="bg" alt="背景丢失">
+        
+        <!-- 巨大的立绘 -->
+        <img src="normal.png" id="character" alt="立绘丢失">
+
+        <!-- 飘落花瓣 -->
+        <div id="petal-container"></div>
+
+        <!-- 固定的对话框层 -->
+        <div id="ui-layer">
+            <div class="dialog-box">
+                <div id="speaker-name">刘清正</div>
+                <div id="text-content">点击继续...</div>
+                <div id="click-hint">▼ 点击继续</div>
+            </div>
+        </div>
+
+        <!-- 选项菜单（独立于对话框） -->
+        <div id="choices">
+            <button class="choice-btn" onclick="chooseTouch('head')">摸摸头</button>
+            <button class="choice-btn" onclick="chooseTouch('face')">摸摸脸</button>
+            <button class="choice-btn" onclick="wakeUp()">从梦中醒来</button>
+        </div>
+    </div>
+
+    <audio id="bgm1" src="bgm1.mp3" loop></audio>
+    <audio id="bgm2" src="bgm2.mp3" loop></audio>
+
+    <script>
+        // 剧本数据
+        const script = [
+            { speaker: "刘清正", text: "欸多，同学你怎么也在这里？" },
+            { speaker: "我", text: "学长这是哪啊" },
+            { speaker: "刘清正", text: "不知道喵。" },
+            { speaker: "刘清正", text: "不过今天上课上的人家好累的。" },
+            { speaker: "刘清正", text: "同学酱你今天过得怎么样？" },
+            { speaker: "我", text: "我还好。嘿嘿" },
+            { speaker: "我", text: "不过我今天有点想一个人。" },
+            { speaker: "刘清正", text: "（生闷气）你想的是谁？" },
+            { speaker: "我", text: "这个人。" },
+            { speaker: "刘清正", text: "嗯？" },
+            { speaker: "我", text: "是个男的。" },
+            { speaker: "刘清正", text: "哦哦。" },
+            { speaker: "我", text: "此刻。和我。在一起。" },
+            { speaker: "刘清正", text: "什。。么。。。！！！", action: "blush" },
+            { speaker: "刘清正", text: "真…真拿你没办法喵！" },
+            { speaker: "刘清正", text: "我今天其实也很想你啦！嘻嘻。", action: "show_choices" }
+        ];
+
+        let currentLine = 0;
+        let isPetMode = false;
+        let petTimer = null;
+        let petStartTime = 0;
+
+        const charElement = document.getElementById('character');
+        const nameElement = document.getElementById('speaker-name');
+        const textElement = document.getElementById('text-content');
+        const choicesElement = document.getElementById('choices');
+        const clickHint = document.getElementById('click-hint');
+        const bgm1 = document.getElementById('bgm1');
+        const bgm2 = document.getElementById('bgm2');
+
+        function startGame() {
+            document.getElementById('start-screen').style.display = 'none';
+            document.getElementById('game-container').style.display = 'block';
+            bgm1.volume = 0.5;
+            bgm1.play().catch(e => console.log("等待音乐文件"));
+            startPetals();
+            updateText();
+        }
+
+        function updateText() {
+            if (currentLine >= script.length) return;
+            let line = script[currentLine];
+
+            // 渲染名字和文字
+            nameElement.innerText = line.speaker;
+            textElement.innerText = line.text;
+
+            // 名字如果是“我”，隐藏名字框或者改个颜色
+            if (line.speaker === "我") {
+                nameElement.style.background = "#a0d8ef"; // 浅蓝色代表玩家
+                nameElement.innerText = "我";
+            } else {
+                nameElement.style.background = "#ffb6c1"; // 粉色代表刘清正
+            }
+
+            if (line.action === "blush") {
+                charElement.src = 'blush.png'; 
+            } else if (line.action === "show_choices") {
+                setTimeout(showChoices, 500);
+                return; 
+            }
+        }
+
+        // 点击屏幕推进
+        document.getElementById('game-container').addEventListener('click', function(e) {
+            if (isPetMode) return; 
+            if (choicesElement.style.display === 'flex') return; 
+            if (e.target.classList.contains('choice-btn')) return;
+
+            currentLine++;
+            if (currentLine < script.length) {
+                updateText();
+            }
+        });
+
+        function showChoices() {
+            choicesElement.style.display = 'flex';
+            clickHint.style.display = 'none';
+        }
+
+        function hideChoices() {
+            choicesElement.style.display = 'none';
+        }
+
+        function chooseTouch(type) {
+            hideChoices();
+            bgm1.pause();
+            bgm2.volume = 0.5;
+            bgm2.play().catch(e => console.log("等待音乐文件"));
+
+            nameElement.innerText = "刘清正";
+            nameElement.style.background = "#ffb6c1";
+            
+            if (type === 'head') {
+                textElement.innerText = "*害羞地低头看着你。";
+            } else {
+                textElement.innerText = "*害羞地抬头看着你。";
+            }
+
+            // 立绘进入超级巨大化模式，隐藏 UI
+            charElement.classList.add('pet-mode');
+            
+            setTimeout(() => {
+                enterPetMode();
+            }, 1000);
+        }
+
+        function enterPetMode() {
+            isPetMode = true;
+            document.getElementById('ui-layer').style.display = 'none'; // 隐藏对话框
+            clickHint.style.display = 'none';
+            petStartTime = Date.now(); 
+        }
+
+        charElement.addEventListener('click', function(e) {
+            if (!isPetMode) return;
+            e.stopPropagation(); 
+
+            // 剧烈抖动
+            charElement.classList.add('shaking');
+            
+            if (petTimer) clearTimeout(petTimer);
+            petTimer = setTimeout(() => {
+                charElement.classList.remove('shaking');
+            }, 400); // 抖0.4秒
+
+            let currentDuration = Date.now() - petStartTime;
+            if (currentDuration >= 10000) { 
+                triggerSpecialStory();
+            }
+        });
+
+        function triggerSpecialStory() {
+            isPetMode = false;
+            charElement.classList.remove('shaking', 'pet-mode');
+            if (petTimer) clearTimeout(petTimer);
+
+            // 显示对话框并更新文本
+            document.getElementById('ui-layer').style.display = 'block';
+            nameElement.innerText = "刘清正";
+            nameElement.style.background = "#ffb6c1";
+            textElement.innerText = "补药再点人家了喵！小猫也是有脾气的！！";
+            
+            setTimeout(() => {
+                showChoices();
+            }, 1000);
+        }
+
+        function wakeUp() {
+            bgm1.pause();
+            bgm2.pause();
+            document.body.innerHTML = "<div style='width:100vw;height:100vh;background:#fff;display:flex;justify-content:center;align-items:center;color:#ff99bb;font-size:30px;font-family:\"Microsoft YaHei\";'>梦醒了...</div>";
+        }
+
+        function startPetals() {
+            const container = document.getElementById('petal-container');
+            setInterval(() => {
+                const petal = document.createElement('img');
+                petal.src = 'petals.png'; 
+                petal.className = 'petal';
+                
+                petal.style.left = Math.random() * 100 + 'vw';
+                petal.style.width = (Math.random() * 70 + 30) + 'px'; 
+                petal.style.animationDuration = (Math.random() * 3 + 4) + 's'; 
+                
+                container.appendChild(petal);
+
+                setTimeout(() => {
+                    petal.remove();
+                }, 7000);
+            }, 300);
+        }
+    </script>
+</body>
+</html>
